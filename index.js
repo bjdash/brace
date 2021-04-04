@@ -7683,7 +7683,7 @@ var Document = function(textOrLines) {
     oop.implement(this, EventEmitter);
     this.setValue = function(text) {
         var len = this.getLength() - 1;
-        this.remove(new Range(0, 0, len, this.getLine(len).length));
+        this.remove(new Range(0, 0, len, this.getLine(len).length), true);
         this.insert({row: 0, column: 0}, text);
     };
     this.getValue = function() {
@@ -7859,7 +7859,7 @@ var Document = function(textOrLines) {
         
         return this.clonePos(end);
     };
-    this.remove = function(range) {
+    this.remove = function(range, skipSignal) {
         var start = this.clippedPos(range.start.row, range.start.column);
         var end = this.clippedPos(range.end.row, range.end.column);
         this.applyDelta({
@@ -7867,7 +7867,7 @@ var Document = function(textOrLines) {
             end: end,
             action: "remove",
             lines: this.getLinesForRange({start: start, end: end})
-        });
+        },undefined, skipSignal);
         return this.clonePos(start);
     };
     this.removeInLine = function(row, startColumn, endColumn) {
@@ -7942,7 +7942,7 @@ var Document = function(textOrLines) {
             this.revertDelta(deltas[i]);
         }
     };
-    this.applyDelta = function(delta, doNotValidate) {
+    this.applyDelta = function(delta, doNotValidate,skipSignal) {
         var isInsert = delta.action == "insert";
         if (isInsert ? delta.lines.length <= 1 && !delta.lines[0]
             : !Range.comparePoints(delta.start, delta.end)) {
@@ -7952,7 +7952,9 @@ var Document = function(textOrLines) {
         if (isInsert && delta.lines.length > 20000)
             this.$splitAndapplyLargeDelta(delta, 20000);
         applyDelta(this.$lines, delta, doNotValidate);
-        this._signal("change", delta);
+        if(!skipSignal){
+            this._signal("change", delta);
+        }
     };
     
     this.$splitAndapplyLargeDelta = function(delta, MAX) {
